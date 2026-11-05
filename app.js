@@ -851,6 +851,23 @@ function browserName() {
   return b ? `${b.brand} ${b.version}` : navigator.userAgent.split(' ').pop();
 }
 
+// Mic problems get a plain fix, not the browser's one-word error.
+function explainError(err) {
+  const site = location.host;
+  switch (err?.name) {
+    case 'NotAllowedError':
+      return `The microphone is blocked for ${site}. Click the icon at the left of the address bar, set Microphone to Allow, refresh, then press START.`;
+    case 'NotFoundError':
+      return 'No microphone found. Plug one in or pick another in the Microphone list.';
+    case 'NotReadableError':
+      return 'Windows would not hand over the microphone. Another app may be holding it; close it, or pick another mic, then press START.';
+    case 'OverconstrainedError':
+      return 'That microphone is no longer available. Pick "Default microphone" and press START.';
+    default:
+      return err?.message || String(err);
+  }
+}
+
 async function start() {
   els.start.disabled = true;
   const engine = $('#engine').value;
@@ -897,7 +914,7 @@ async function start() {
   } catch (err) {
     console.error(err);
     perf.event('error', { message: err.message || String(err), during: 'start' });
-    setStatus(err.message || String(err), true);
+    setStatus(explainError(err), true);
     els.start.disabled = false;
   }
 }
