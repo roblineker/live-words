@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live Words</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;700&family=Instrument+Serif:ital@1&family=Major+Mono+Display&family=Space+Mono:wght@400;700&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script>
+  // Hosted copies (GitHub Pages): add isolation headers through a service worker, then reload once.
+  const local = ['127.0.0.1', 'localhost'].includes(location.hostname);
+  if (!local && !window.crossOriginIsolated && window.isSecureContext && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('coi-sw.js').then(() => navigator.serviceWorker.ready).then(() => {
+      if (!window.crossOriginIsolated && !sessionStorage.getItem('coiReloaded')) {
+        sessionStorage.setItem('coiReloaded', '1');
+        location.reload();
+      }
+    });
+  }
+</script>
+</head>
+<body class="paused">
+<canvas id="bg"></canvas>
+
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+
+<div id="live"><span class="dot"></span>LIVE</div>
+<div id="model-label">speech model · on this laptop</div>
+
+<main id="stage"></main>
+
+<aside id="transcript">
+  <div class="panel-title">TRANSCRIPT</div>
+  <div id="transcript-list"></div>
+</aside>
+
+<section id="hud">
+  <div class="panel">
+    <h3>DEVICES</h3>
+    <dl>
+      <dt>mic</dt><dd id="d-mic">-</dd>
+      <dt>camera</dt><dd id="d-cam">off</dd>
+      <dt>engine</dt><dd id="d-engine">-</dd>
+      <dt>backend</dt><dd id="d-backend">-</dd>
+      <dt>browser</dt><dd id="d-browser">-</dd>
+    </dl>
+  </div>
+  <div class="panel">
+    <h3>PIPELINE</h3>
+    <div class="chips">
+      <span class="chip" data-chip="mic">mic</span><span class="arrow">-</span>
+      <span class="chip" data-chip="model">speech model</span><span class="arrow">-</span>
+      <span class="chip" data-chip="words">words</span><span class="arrow">-</span>
+      <span class="chip" data-chip="scene">creative code</span>
+    </div>
+    <div class="meter"><i id="meter"></i></div>
+  </div>
+  <div class="panel">
+    <h3>REVISIONS</h3>
+    <div id="revisions"></div>
+  </div>
+  <div class="panel">
+    <h3>STATS</h3>
+    <dl>
+      <dt>voice to word</dt><dd id="s-latency">-</dd>
+      <dt>words</dt><dd id="s-words">0</dd>
+      <dt>revised</dt><dd id="s-revised">0</dd>
+      <dt>render</dt><dd id="s-fps">-</dd>
+      <dt>running</dt><dd id="s-clock">00:00</dd>
+    </dl>
+  </div>
+  <div class="panel">
+    <h3>KEYS</h3>
+    <div class="hud-keys">
+      <b>Space</b><span>pause / listen</span>
+      <b>&rarr; &larr;</b><span>next / prev card</span>
+      <b>Esc</b><span>hide card</span>
+      <b>D</b><span>design panel</span>
+      <b>C</b><span>camera on / off</span>
+      <b>T</b><span>transcript</span>
+      <b>X</b><span>clear stage</span>
+      <b>F</b><span>fullscreen</span>
+      <b>H</b><span>hide HUD</span>
+    </div>
+  </div>
+</section>
+
+<div id="card">
+  <div class="card-tag"></div>
+  <div class="card-title"></div>
+  <div class="card-sub"></div>
+</div>
+
+<div id="setup">
+  <div class="setup-box">
+    <div class="panel-title">LIVE PIPELINE</div>
+    <h1>LIVE WORDS</h1>
+    <p class="lede">Talk. Your words build the scene. The speech model runs on this laptop.</p>
+
+    <label>Speech engine
+      <select id="engine">
+        <option value="moonshine-base">Moonshine Base (local, most accurate)</option>
+        <option value="moonshine-tiny">Moonshine Tiny (local, fastest)</option>
+        <option value="browser">Browser speech (Chrome/Edge, uses their cloud)</option>
+      </select>
+    </label>
+    <label>Runs on (Moonshine only)
+      <select id="device">
+        <option value="auto">Auto (GPU if available, else CPU)</option>
+        <option value="webgpu">GPU (WebGPU)</option>
+        <option value="wasm">CPU (all cores)</option>
+      </select>
+    </label>
+    <label>Audio in
+      <select id="source">
+        <option value="mic">Microphone</option>
+        <option value="file">Demo recording (demo.wav)</option>
+      </select>
+    </label>
+    <label>Microphone
+      <select id="mic"><option value="">Default microphone</option></select>
+    </label>
+    <label>Camera (drawn as ASCII art in the background)
+      <select id="cam"><option value="">Off</option><option value="default">Default camera</option></select>
+    </label>
+
+    <button id="start">START</button>
+    <div class="progress"><i id="progress"></i></div>
+    <div id="status">First run downloads the model (about 60 to 200 MB). After that it is cached.</div>
+
+    <div class="keys">
+      <span>Space</span> pause / listen
+      <span>→ / PgDn</span> next card
+      <span>← / PgUp</span> previous card
+      <span>Esc / .</span> hide card
+      <span>H</span> hide HUD
+      <span>T</span> hide transcript
+      <span>C</span> camera on / off
+      <span>X</span> clear stage
+      <span>F</span> fullscreen
+      <span>D</span> design panel (works now too)
+    </div>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
