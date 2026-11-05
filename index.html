@@ -108,13 +108,13 @@
       <select id="engine">
         <option value="moonshine-base">Moonshine Base (local, most accurate)</option>
         <option value="moonshine-tiny">Moonshine Tiny (local, fastest)</option>
-        <option value="browser">Browser speech (Chrome/Edge, uses their cloud)</option>
+        <option value="browser" selected>Browser speech (Chrome/Edge, uses their cloud, fastest)</option>
       </select>
     </label>
     <label>Runs on (Moonshine only)
       <select id="device">
         <option value="auto">Auto (GPU if available, else CPU)</option>
-        <option value="webgpu">GPU (WebGPU)</option>
+        <option value="webgpu" selected>GPU (WebGPU)</option>
         <option value="wasm">CPU (all cores)</option>
       </select>
     </label>
@@ -128,7 +128,7 @@
       <select id="mic"><option value="">Default microphone</option></select>
     </label>
     <label>Camera (drawn as ASCII art in the background)
-      <select id="cam"><option value="">Off</option><option value="default">Default camera</option></select>
+      <select id="cam"><option value="">Off</option><option value="default" selected>Default camera</option></select>
     </label>
 
     <button id="start">START</button>

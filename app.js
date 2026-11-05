@@ -96,7 +96,7 @@ const state = {
   words: 0,
   revisions: 0,
   camStream: null,
-  camId: '',
+  camId: 'default', // camera on by default; the picker can turn it off
   lastCamId: '',
   cameras: [],
   camVideo: null,

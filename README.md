@@ -12,7 +12,7 @@ Inspired by kem_glitch's reel, minus the green screen and person cutout.
 
 Locally: double-click `start.cmd` (it needs Node), or run `node server.mjs` and open http://127.0.0.1:5177 in Chrome or Edge.
 
-Pick an engine and press START.
+Pick an engine and press START. Defaults: Browser speech, microphone and the default camera on, and GPU when you switch to Moonshine.
 
 | Engine | Where it runs | Notes |
 | --- | --- | --- |
