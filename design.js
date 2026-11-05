@@ -28,6 +28,7 @@ export const DESIGN_DEFAULTS = {
   transcriptSize: 1,
   hudOpacity: 1,
   frame: true,
+  uiScale: 1,
   cardScale: 1,
   cardFont: 'Anton',
   cardHold: 8,
@@ -201,6 +202,7 @@ const SECTIONS = [
     { key: 'cursor', label: 'block cursor', type: 'toggle' },
   ]],
   ['PANELS', [
+    { key: 'uiScale', label: 'UI scale', type: 'dial', min: 0.5, max: 3, step: 0.05 },
     { key: 'cardScale', label: 'card size', type: 'dial', min: 0.5, max: 1.6, step: 0.02 },
     { key: 'cardHold', label: 'card secs', type: 'dial', min: 0, max: 30, step: 1, unit: 's' },
     { key: 'cardFont', label: 'card font', type: 'select', options: FONTS },
@@ -487,5 +489,11 @@ export function createDesignPanel({ onChange, onPreview, onCamera }) {
 
   commit(false);
   // The app owns the device list and fills the picker with it.
-  return { design, toggle: toggle_, shuffle, undo, setCameraOptions: (fill) => camSelect && fill(camSelect) };
+  function set(key, value) {
+    design[key] = value;
+    refreshers.forEach((r) => r());
+    commit();
+  }
+
+  return { design, toggle: toggle_, shuffle, undo, set, setCameraOptions: (fill) => camSelect && fill(camSelect) };
 }

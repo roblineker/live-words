@@ -39,6 +39,7 @@ Pick an engine and press START. Defaults: Browser speech, microphone and the def
 | F | fullscreen |
 | D | design panel |
 | S / Z | shuffle the design / undo |
+| + / - / 0 | UI scale bigger / smaller / reset (for big screens and TVs) |
 
 PgUp/PgDn/Esc/B are what presenter clickers send, so a clicker steps through the cards.
 

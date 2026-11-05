@@ -62,6 +62,7 @@ function applyDesign(d) {
   root.setProperty('--transcript-size', d.transcriptSize);
   root.setProperty('--hud-opacity', d.hudOpacity);
   root.setProperty('--card-scale', d.cardScale);
+  root.setProperty('--z', d.uiScale);
 
   const cls = document.body.classList;
   cls.toggle('lower', !d.uppercase);
@@ -941,9 +942,27 @@ const design = panel.design;
 
 // ---------- keys ----------
 
+const toastEl = Object.assign(document.createElement('div'), { id: 'toast' });
+document.body.appendChild(toastEl);
+let toastTimer = 0;
+function toast(text) {
+  toastEl.textContent = text;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 700);
+}
+
+
 document.addEventListener('keydown', (e) => {
   if (e.target.closest?.('select, input, textarea')) return;
   if (e.key === 'd' || e.key === 'D') { panel.toggle(); e.preventDefault(); return; }
+  if (!e.ctrlKey && !e.metaKey && ['+', '=', '-', '_', '0'].includes(e.key)) {
+    const z = e.key === '0' ? 1 : design.uiScale + (e.key === '-' || e.key === '_' ? -0.1 : 0.1);
+    panel.set('uiScale', +Math.min(3, Math.max(0.5, z)).toFixed(2));
+    toast(`UI ${Math.round(design.uiScale * 100)}%`);
+    e.preventDefault();
+    return;
+  }
   if (!e.ctrlKey && !e.metaKey && (e.key === 's' || e.key === 'S')) { panel.shuffle(); e.preventDefault(); return; }
   if (!e.ctrlKey && !e.metaKey && (e.key === 'z' || e.key === 'Z')) { panel.undo(); e.preventDefault(); return; }
   if (!document.body.classList.contains('running')) return;
