@@ -71,6 +71,85 @@ const PRESETS = {
   },
 };
 
+// [paper, ink, live dot, card, card ink]
+const PALETTES = [
+  ['#f1f1ee', '#141414', '#e5484d', '#ffffff', '#141414'],
+  ['#070b07', '#3cff72', '#3cff72', '#070b07', '#3cff72'],
+  ['#123f8f', '#e8f0ff', '#ffd23f', '#e8f0ff', '#123f8f'],
+  ['#f4eee2', '#1d3fbb', '#ff4f6d', '#fff7ea', '#1d3fbb'],
+  ['#101010', '#efefe9', '#ff5a4f', '#efefe9', '#101010'],
+  ['#ffef5c', '#111111', '#ff2e63', '#111111', '#ffef5c'],
+  ['#ff5b2e', '#1a0f0a', '#ffffff', '#1a0f0a', '#ff5b2e'],
+  ['#e9e4ff', '#3b1fa3', '#ff3d7f', '#3b1fa3', '#e9e4ff'],
+  ['#0d1b2a', '#ffb703', '#fb8500', '#ffb703', '#0d1b2a'],
+  ['#f7f3ea', '#7a1f1f', '#c0392b', '#7a1f1f', '#f7f3ea'],
+  ['#d8f3dc', '#081c15', '#2d6a4f', '#081c15', '#d8f3dc'],
+  ['#1b1b1b', '#ff6ec7', '#00e5ff', '#ff6ec7', '#1b1b1b'],
+  ['#fdf0d5', '#003049', '#c1121f', '#003049', '#fdf0d5'],
+];
+const MONO_FONTS = ['IBM Plex Mono', 'Space Mono', 'VT323', 'Major Mono Display'];
+
+const rand = (lo, hi, step = 0) => {
+  const v = lo + Math.random() * (hi - lo);
+  return step ? +(Math.round(v / step) * step).toFixed(decimals(step)) : v;
+};
+const pick = (arr) => arr[(Math.random() * arr.length) | 0];
+
+function hslHex(h, s, l) {
+  s /= 100; l /= 100;
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const c = l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(c * 255).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+// A made-up palette: near-black or near-white paper, a saturated ink far enough away to read.
+function inventPalette() {
+  const h = rand(0, 360);
+  const dark = Math.random() < 0.5;
+  const paper = hslHex(h, rand(8, 50), dark ? rand(5, 12) : rand(88, 96));
+  const inkHue = (h + pick([0, 30, 150, 180, 210])) % 360;
+  const ink = hslHex(inkHue, rand(55, 100), dark ? rand(60, 78) : rand(14, 32));
+  const accent = hslHex((inkHue + rand(120, 220)) % 360, 90, 55);
+  return Math.random() < 0.5 ? [paper, ink, accent, ink, paper] : [paper, ink, accent, paper, ink];
+}
+
+function shuffledDesign() {
+  const [paper, ink, accent, cardBg, cardInk] = Math.random() < 0.6 ? pick(PALETTES) : inventPalette();
+  const stageFont = pick(FONTS);
+  return {
+    paper, ink, accent, cardBg, cardInk,
+    speed: rand(0.2, 2.5, 0.05),
+    amount: rand(0.4, 2, 0.05),
+    blobScale: rand(0.5, 2.2, 0.05),
+    reactivity: rand(0.4, 2.4, 0.05),
+    grid: Math.round(rand(80, 160)),
+    inkAlpha: rand(0.4, 0.95, 0.01),
+    texture: rand(0, 0.9, 0.01),
+    glyphRate: rand(0, 0.3, 0.01),
+    crosses: Math.round(rand(0, 14)),
+    burstSize: rand(0.4, 2.2, 0.05),
+    ramp: pick(Object.values(RAMPS)),
+    sceneFont: pick(MONO_FONTS),
+    stageFont,
+    stageSize: rand(2.8, 5.2, 0.1) * (stageFont === 'VT323' ? 1.25 : 1),
+    tracking: rand(-0.02, 0.12, 0.005),
+    uppercase: Math.random() < 0.8,
+    glow: Math.random() < 0.5,
+    boxPct: Math.round(rand(0, 25)),
+    serifPct: Math.round(rand(0, 15)),
+    invPct: Math.round(rand(0, 15)),
+    cardFont: pick(['Anton', 'Archivo Black', 'VT323', 'Instrument Serif', 'Major Mono Display', 'Space Mono']),
+    camMode: pick(['blend', 'blend', 'camera only', 'edges', 'edges + fill']),
+    camContrast: rand(0.8, 2, 0.05),
+    camTrail: Math.random() < 0.4 ? rand(0.3, 0.8, 0.01) : 0,
+    camLevels: pick([0, 0, 0, 3, 4, 6]),
+    camInvert: Math.random() < 0.2,
+  };
+}
+
 // type: dial | slider | color | select | toggle | text
 const SECTIONS = [
   ['SCENE', [
@@ -361,7 +440,29 @@ export function createDesignPanel({ onChange, onPreview, onCamera }) {
     }),
   );
 
-  panel.append(head, presetRow, actions);
+  const history = [];
+  function shuffle() {
+    history.push({ ...design });
+    if (history.length > 30) history.shift();
+    Object.assign(design, shuffledDesign());
+    design.stageSize = +design.stageSize.toFixed(1);
+    refreshers.forEach((r) => r());
+    commit();
+  }
+  function undo() {
+    const prev = history.pop();
+    if (!prev) return;
+    Object.assign(design, prev);
+    refreshers.forEach((r) => r());
+    commit();
+  }
+
+  const shuffleRow = el('div', 'design-shuffle');
+  const shuffleBtn = btn('SHUFFLE (S)', shuffle);
+  shuffleBtn.className = 'shuffle-btn';
+  shuffleRow.append(shuffleBtn, btn('undo (Z)', undo));
+
+  panel.append(head, shuffleRow, presetRow, actions);
 
   for (const [name, defs] of SECTIONS) {
     const sec = el('section', 'design-sec');
@@ -386,5 +487,5 @@ export function createDesignPanel({ onChange, onPreview, onCamera }) {
 
   commit(false);
   // The app owns the device list and fills the picker with it.
-  return { design, toggle: toggle_, setCameraOptions: (fill) => camSelect && fill(camSelect) };
+  return { design, toggle: toggle_, shuffle, undo, setCameraOptions: (fill) => camSelect && fill(camSelect) };
 }

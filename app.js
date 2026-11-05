@@ -927,6 +927,8 @@ const design = panel.design;
 document.addEventListener('keydown', (e) => {
   if (e.target.closest?.('select, input, textarea')) return;
   if (e.key === 'd' || e.key === 'D') { panel.toggle(); e.preventDefault(); return; }
+  if (!e.ctrlKey && !e.metaKey && (e.key === 's' || e.key === 'S')) { panel.shuffle(); e.preventDefault(); return; }
+  if (!e.ctrlKey && !e.metaKey && (e.key === 'z' || e.key === 'Z')) { panel.undo(); e.preventDefault(); return; }
   if (!document.body.classList.contains('running')) return;
   switch (e.key) {
     case ' ': setListening(!state.listening); break;

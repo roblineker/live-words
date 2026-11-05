@@ -379,6 +379,18 @@ body.running #setup { display: none; }
   cursor: pointer;
 }
 .design-x:hover, .design-presets button:hover { background: var(--ink); color: #fff; }
+.design-shuffle { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-bottom: 8px; }
+.design-shuffle button {
+  padding: 8px 10px;
+  font: 500 12px var(--mono);
+  border: 2px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  cursor: pointer;
+}
+.design-shuffle .shuffle-btn { font: 400 22px var(--display); letter-spacing: .08em; background: var(--ink); color: #fff; }
+.design-shuffle button:hover { filter: invert(1); }
+.design-shuffle .shuffle-btn:active { transform: scale(.98); }
 .design-presets { display: flex; gap: 6px; margin-bottom: 8px; }
 .design-presets select { flex: 1; min-width: 0; }
 .design-panel select, .design-panel input[type="text"] {

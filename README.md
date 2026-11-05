@@ -37,6 +37,8 @@ Pick an engine and press START.
 | C | camera on/off, drawn as ASCII art in the background |
 | X | clear the stage |
 | F | fullscreen |
+| D | design panel |
+| S / Z | shuffle the design / undo |
 
 PgUp/PgDn/Esc/B are what presenter clickers send, so a clicker steps through the cards.
 
