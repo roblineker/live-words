@@ -60,9 +60,11 @@ export function createAsciiBackground(canvas) {
   }
 
   function resize() {
-    dpr = window.devicePixelRatio || 1;
     W = window.innerWidth;
     H = window.innerHeight;
+    // Phones: cap pixel density and character count so the scene stays smooth.
+    const small = Math.min(W, H) < 600 || matchMedia('(pointer: coarse)').matches;
+    dpr = Math.min(window.devicePixelRatio || 1, small ? 2 : 3);
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     canvas.style.width = W + 'px';
@@ -70,6 +72,8 @@ export function createAsciiBackground(canvas) {
     ctx.font = font(100);
     const ratio = (ctx.measureText('M').width || 60) / 100;
     cell = Math.max(5, W / params.grid / ratio);
+    const maxCells = small ? 6500 : Infinity;
+    cell = Math.max(cell, Math.sqrt((W * H) / (ratio * maxCells)));
     cw = cell * ratio;
     cols = Math.ceil(W / cw);
     rows = Math.ceil(H / cell);

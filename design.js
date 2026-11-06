@@ -389,7 +389,7 @@ export function createDesignPanel({ onChange, onPreview, onCamera }) {
   // Header: presets and actions
   const head = el('div', 'design-head');
   const title = el('div', 'panel-title', 'DESIGN');
-  const close = el('button', 'design-x', 'D to close');
+  const close = el('button', 'design-x', 'close (D)');
   close.addEventListener('click', () => toggle_());
   head.append(title, close);
 

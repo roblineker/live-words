@@ -17,6 +17,11 @@ const STOPWORDS = new Set(('a an the and or but of to in on at for with is are w
   'had will would can could into about there here what when which who how all some very really also').split(' '));
 
 const $ = (s) => document.querySelector(s);
+
+// PHONE: a phone or tablet OS (mic sharing and speech recognition behave differently).
+// Mobile layout is a separate, size-based decision made in updateLayout().
+const PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const els = {
   stage: $('#stage'),
   transcript: $('#transcript-list'),
@@ -97,7 +102,7 @@ const state = {
   words: 0,
   revisions: 0,
   camStream: null,
-  camId: 'default', // camera on by default; the picker can turn it off
+  camId: PHONE ? 'front' : 'default', // camera on by default; the picker can turn it off
   lastCamId: '',
   cameras: [],
   camVideo: null,
@@ -708,7 +713,8 @@ const perf = (() => {
 const audio = { ctx: null, stream: null, source: null };
 
 async function startAudio({ deviceId, file }) {
-  const ctx = new AudioContext({ sampleRate: SAMPLE_RATE });
+  // Native rate: phones refuse a forced 16 kHz. The worklet resamples to 16 kHz.
+  const ctx = new AudioContext();
   await ctx.audioWorklet.addModule('./capture-worklet.js');
   const node = new AudioWorkletNode(ctx, 'capture');
   node.port.onmessage = (e) => onFrame(e.data);
@@ -752,7 +758,9 @@ function startWebSpeech() {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) throw new Error('This browser has no built-in speech recognition. Use Chrome or Edge, or pick a Moonshine engine.');
   const rec = new SR();
-  rec.continuous = true;
+  // Android's continuous mode stalls and repeats text, so phones listen in short
+  // sessions that restart on their own.
+  rec.continuous = !PHONE;
   rec.interimResults = true;
   rec.lang = navigator.language || 'en-AU';
   rec.onresult = (e) => {
@@ -770,10 +778,17 @@ function startWebSpeech() {
       try { rec.start(); } catch { /* already restarting */ }
     }
   };
+  rec.onsoundstart = () => { bg.setLevel(0.6); pulseChip('mic', 400); };
   rec.onerror = (e) => {
-    if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-      setStatus('The browser blocked speech recognition.', true);
-    }
+    perf.event('speech-error', { error: e.error });
+    const msg = {
+      'not-allowed': 'The microphone is blocked for this site. Allow it in the site settings (icon left of the address), then reload.',
+      'service-not-allowed': 'This browser does not allow speech recognition here.',
+      'audio-capture': 'Speech recognition could not reach the microphone. Close other apps using it, then reload.',
+      'network': 'Browser speech needs an internet connection.',
+      'language-not-supported': 'Browser speech does not support this language.',
+    }[e.error];
+    if (msg) { setStatus(msg, true); toast(msg, 6000); }
   };
   ws.rec = rec;
   ws.session++;
@@ -796,7 +811,9 @@ async function setCamera(id) {
   state.lastCamId = id;
   try {
     const video = { width: 640, height: 480 };
-    if (id !== 'default') video.deviceId = { exact: id };
+    if (id === 'front') video.facingMode = 'user';
+    else if (id === 'back') video.facingMode = { exact: 'environment' };
+    else if (id !== 'default') video.deviceId = { exact: id };
     const stream = await navigator.mediaDevices.getUserMedia({ video });
     const el = state.camVideo || document.createElement('video');
     el.muted = true;
@@ -819,13 +836,24 @@ function toggleCamera() {
   setCamera(state.camStream ? '' : (state.lastCamId || 'default'));
 }
 
+// Phones: off, front, back, off...
+function cycleCamera() {
+  setCamera({ '': 'front', front: 'back', back: '' }[state.camStream ? state.camId : ''] ?? 'front')
+    .then(syncTouchbar);
+}
+
 // Fills a <select> with Off / Default / each camera, keeping the current choice.
 function fillCameraSelect(sel) {
   const keep = state.camId ?? sel.value;
   sel.textContent = '';
   const add = (value, label) => sel.appendChild(Object.assign(document.createElement('option'), { value, textContent: label }));
   add('', 'Off');
-  add('default', 'Default camera');
+  if (PHONE) {
+    add('front', 'Front camera');
+    add('back', 'Back camera');
+  } else {
+    add('default', 'Default camera');
+  }
   state.cameras.forEach((c, i) => add(c.deviceId, c.label || `Camera ${i + 1}`));
   sel.value = [...sel.options].some((o) => o.value === keep) ? keep : '';
 }
@@ -839,12 +867,22 @@ function syncCameraPickers() {
 
 function setListening(on) {
   state.listening = on;
+  queueMicrotask(syncTouchbar);
   document.body.classList.toggle('paused', !on);
   if (!on) endUtterance();
   if (state.engine === 'browser' && ws.rec) {
     if (on) { ws.session++; try { ws.rec.start(); } catch { /* running */ } } else ws.rec.stop();
   }
 }
+
+// Stop the phone screen sleeping mid-talk.
+let wakeLock = null;
+async function keepAwake() {
+  try { wakeLock = await navigator.wakeLock?.request('screen'); } catch { /* not supported */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && document.body.classList.contains('running') && (!wakeLock || wakeLock.released)) keepAwake();
+});
 
 function browserName() {
   const brands = navigator.userAgentData?.brands || [];
@@ -883,7 +921,7 @@ async function start() {
       state.loadMs = Math.round(performance.now() - loadStart);
       els.progress.style.width = '100%';
       $('#d-backend').textContent = info.device;
-      els.modelLabel.textContent = `speech model · ${engine.replace('-', ' ')} · on this laptop`;
+      els.modelLabel.textContent = `speech model · ${engine.replace('-', ' ')} · on this device`;
     } else {
       $('#d-backend').textContent = 'browser cloud service';
       els.modelLabel.textContent = 'speech model · browser speech service';
@@ -892,13 +930,18 @@ async function start() {
     $('#d-browser').textContent = browserName();
 
     state.t0 = performance.now();
-    await startAudio({ deviceId: $('#mic').value, file });
+    // Phones give the mic to one user at a time: if the page held it for the level meter,
+    // Android's speech recogniser would hear nothing. Browser speech on a phone skips it.
+    if (isLocal() || !PHONE) await startAudio({ deviceId: $('#mic').value, file });
+    else $('#d-mic').textContent = 'used by browser speech';
     if (!isLocal()) startWebSpeech();
     if ($('#cam').value) setCamera($('#cam').value);
     listDevices();
 
     document.body.classList.add('running');
     setListening(true);
+    keepAwake();
+    wake();
     setInterval(() => { $('#s-clock').textContent = fmtTime(performance.now() - state.t0).slice(0, 5); }, 500);
 
     let gpu = null;
@@ -940,16 +983,38 @@ async function listDevices() {
 const panel = createDesignPanel({ onChange: applyDesign, onPreview: previewWords, onCamera: (id) => setCamera(id) });
 const design = panel.design;
 
+// ---------- actions (keys and touch toolbar) ----------
+
+const actions = {
+  listen: () => setListening(!state.listening),
+  next: () => stepCard(1),
+  prev: () => stepCard(-1),
+  hide: hideCard,
+  // On phones the HUD starts hidden, so the toggle works the other way round.
+  hud: () => document.body.classList.toggle(mobileLayout ? 'hud-on' : 'hud-off'),
+  transcript: () => document.body.classList.toggle('transcript-off'),
+  camera: () => (PHONE ? cycleCamera() : toggleCamera()),
+  clear: clearStage,
+  design: () => panel.toggle(),
+  shuffle: () => panel.shuffle(),
+  undo: () => panel.undo(),
+  full: () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  },
+};
+
 // ---------- keys ----------
 
 const toastEl = Object.assign(document.createElement('div'), { id: 'toast' });
 document.body.appendChild(toastEl);
 let toastTimer = 0;
-function toast(text) {
+function toast(text, ms = 700) {
   toastEl.textContent = text;
+  toastEl.classList.toggle('long', text.length > 24);
   toastEl.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 700);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
 }
 
 
@@ -966,23 +1031,54 @@ document.addEventListener('keydown', (e) => {
   if (!e.ctrlKey && !e.metaKey && (e.key === 's' || e.key === 'S')) { panel.shuffle(); e.preventDefault(); return; }
   if (!e.ctrlKey && !e.metaKey && (e.key === 'z' || e.key === 'Z')) { panel.undo(); e.preventDefault(); return; }
   if (!document.body.classList.contains('running')) return;
-  switch (e.key) {
-    case ' ': setListening(!state.listening); break;
-    case 'ArrowRight': case 'PageDown': stepCard(1); break;
-    case 'ArrowLeft': case 'PageUp': stepCard(-1); break;
-    case 'Escape': case '.': case 'b': case 'B': hideCard(); break;
-    case 'h': case 'H': document.body.classList.toggle('hud-off'); break;
-    case 't': case 'T': document.body.classList.toggle('transcript-off'); break;
-    case 'c': case 'C': toggleCamera(); break;
-    case 'x': case 'X': clearStage(); break;
-    case 'f': case 'F':
-      if (document.fullscreenElement) document.exitFullscreen();
-      else document.documentElement.requestFullscreen();
-      break;
-    default: return;
-  }
+  const act = {
+    ' ': 'listen', ArrowRight: 'next', PageDown: 'next', ArrowLeft: 'prev', PageUp: 'prev',
+    Escape: 'hide', '.': 'hide', b: 'hide', B: 'hide', h: 'hud', H: 'hud', t: 'transcript', T: 'transcript',
+    c: 'camera', C: 'camera', x: 'clear', X: 'clear', f: 'full', F: 'full',
+  }[e.key];
+  if (!act) return;
+  actions[act]();
   e.preventDefault();
 });
+
+// ---------- touch toolbar (phones and tablets) ----------
+
+document.querySelectorAll('#touchbar button').forEach((b) => {
+  b.addEventListener('click', () => { actions[b.dataset.act](); syncTouchbar(); });
+});
+
+function syncTouchbar() {
+  const on = (act, v) => document.querySelector(`#touchbar [data-act="${act}"]`)?.classList.toggle('on', v);
+  const listen = document.querySelector('#touchbar [data-act="listen"]');
+  if (listen) listen.textContent = state.listening ? 'Pause' : 'Listen';
+  on('camera', !!state.camStream);
+  on('transcript', !document.body.classList.contains('transcript-off'));
+  on('hud', document.body.classList.contains(mobileLayout ? 'hud-on' : 'hud-off') === mobileLayout);
+}
+
+// The toolbar slides away after a few seconds; any tap brings it back.
+let idleTimer = 0;
+function wake() {
+  document.body.classList.remove('touch-idle');
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => document.body.classList.add('touch-idle'), 5000);
+}
+document.addEventListener('pointerdown', wake);
+
+// ---------- mobile layout ----------
+
+let mobileLayout = false;
+function updateLayout() {
+  const next = matchMedia('(max-width: 760px), (pointer: coarse) and (max-width: 1100px)').matches;
+  if (next === mobileLayout) return;
+  mobileLayout = next;
+  document.body.classList.toggle('mobile', next);
+  // Small screens start with just the words: transcript and HUD are a tap away.
+  if (next) document.body.classList.add('transcript-off');
+  syncTouchbar();
+}
+window.addEventListener('resize', updateLayout);
+updateLayout();
 
 els.start.addEventListener('click', start);
 const params = new URLSearchParams(location.search);

@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#141414">
 <title>Live Words</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,7 +32,7 @@
 <div class="corner br"></div>
 
 <div id="live"><span class="dot"></span>LIVE</div>
-<div id="model-label">speech model · on this laptop</div>
+<div id="model-label">speech model · on this device</div>
 
 <main id="stage"></main>
 
@@ -93,6 +94,20 @@
   </div>
 </section>
 
+<nav id="touchbar">
+  <button data-act="listen">Pause</button>
+  <button data-act="next">Card &#9654;</button>
+  <button data-act="hide">Hide card</button>
+  <button data-act="shuffle">Shuffle</button>
+  <button data-act="undo">Undo</button>
+  <button data-act="design">Design</button>
+  <button data-act="camera">Camera</button>
+  <button data-act="transcript">Transcript</button>
+  <button data-act="hud">HUD</button>
+  <button data-act="clear">Clear</button>
+  <button data-act="full">Full screen</button>
+</nav>
+
 <div id="card">
   <div class="card-tag"></div>
   <div class="card-title"></div>
@@ -103,7 +118,7 @@
   <div class="setup-box">
     <div class="panel-title">LIVE PIPELINE</div>
     <h1>LIVE WORDS</h1>
-    <p class="lede">Talk. Your words build the scene. The speech model runs on this laptop.</p>
+    <p class="lede">Talk. Your words build the scene. The speech model can run right on this device.</p>
 
     <label>Speech engine
       <select id="engine">
