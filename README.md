@@ -43,7 +43,7 @@ Pick an engine and press START. Defaults: Browser speech, microphone and the def
 Press **D** any time (even before START) for dials and sliders that restyle everything live:
 
 - **Scene:** speed, blob amount, blob size, voice reactivity, grid size, ink strength, texture, glyphs, crosshairs, stamped words, frame rate, the character set, the font
-- **Camera:** on/off, strength, contrast, brightness, trails, style (blend / camera only / edges / edges + fill), position (full / left / right / centre), posterise, invert, mirror
+- **Camera:** on/off, zoom and move (the picture keeps its shape and framing when the window resizes), strength, contrast, brightness, trails, style (blend / camera only / edges / edges + fill), position (full / left / right / centre), posterise, invert, mirror
 - **Colour:** paper, ink, live dot
 - **Words:** size, spacing, how often words get boxed / serif / inverted, font, phrases on stage, stage width and position, uppercase, glow, cursor
 - **Panels:** UI scale, transcript size and width, HUD opacity, frame

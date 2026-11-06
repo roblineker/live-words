@@ -26,6 +26,9 @@ export const SCENE_DEFAULTS = {
   camMirror: true,
   camTrail: 0,        // motion trails, 0..0.95
   camLevels: 0,       // posterise steps, 0 = smooth
+  camZoom: 1,         // 1 = the whole camera picture fits the area's height
+  camX: 0,            // pan, -1..1
+  camY: 0,
   fps: 30,            // frame rate cap
   ramp: ' .-=+*o%#@', // light to dark
   sceneFont: 'IBM Plex Mono',
@@ -113,19 +116,31 @@ export function createAsciiBackground(canvas) {
 
   let camLum = null, camPrev = null;
 
-  // Fills camDark (one value per grid cell, -1 = outside the camera area) with 0..1 ink density.
+  // Fills camDark (one value per grid cell, -1 = outside the camera picture) with 0..1 ink density.
+  // The picture keeps the camera's own shape and is sized from the region's height times camZoom,
+  // so resizing the window scales it but never re-crops it.
   function sampleCamera() {
     if (!video || video.readyState < 2 || !video.videoWidth) { camDark = null; return; }
     const { c0, r0, w, h } = camRegion();
     if (sampler.width !== w || sampler.height !== h) { sampler.width = w; sampler.height = h; }
     const vw = video.videoWidth, vh = video.videoHeight;
-    // Cells are taller than wide, so crop the video to the region's real aspect.
-    const aspect = (w * cw) / (h * cell);
-    let sw = vw, sh = vw / aspect;
-    if (sh > vh) { sh = vh; sw = vh * aspect; }
+
+    // Picture size and position in cells. Cells are taller than wide (cell vs cw).
+    const ih = h * params.camZoom;
+    const iw = (ih * cell * (vw / vh)) / cw;
+    const dx = (w - iw) / 2 + params.camX * (w + iw) / 4;
+    const dy = (h - ih) / 2 + params.camY * (h + ih) / 4;
+
+    sctx.clearRect(0, 0, w, h);
     sctx.save();
-    if (params.camMirror) { sctx.translate(w, 0); sctx.scale(-1, 1); }
-    sctx.drawImage(video, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, w, h);
+    if (params.camMirror) {
+      // Under the flip, x maps to w - x, so draw at the mirrored spot to land on dx.
+      sctx.translate(w, 0);
+      sctx.scale(-1, 1);
+      sctx.drawImage(video, 0, 0, vw, vh, w - dx - iw, dy, iw, ih);
+    } else {
+      sctx.drawImage(video, 0, 0, vw, vh, dx, dy, iw, ih);
+    }
     sctx.restore();
     const d = sctx.getImageData(0, 0, w, h).data;
     const n = w * h;
@@ -133,6 +148,7 @@ export function createAsciiBackground(canvas) {
 
     let lo = 1, hi = 0;
     for (let i = 0; i < n; i++) {
+      if (d[i * 4 + 3] < 128) { camLum[i] = NaN; continue; } // outside the picture
       const l = (d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114) / 255;
       camLum[i] = l;
       if (l < lo) lo = l;
@@ -151,9 +167,15 @@ export function createAsciiBackground(canvas) {
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
         const i = y * w + x;
-        let v = 1 - (camLum[i] - lo) / span; // dark = dense
+        const own = camLum[i];
+        if (Number.isNaN(own)) { camPrev[i] = 0; continue; }
+        let v = 1 - (own - lo) / span; // dark = dense
         if (edges) {
-          const at = (xx, yy) => camLum[Math.min(h - 1, Math.max(0, yy)) * w + Math.min(w - 1, Math.max(0, xx))];
+          // Neighbours outside the picture count as this pixel, so the picture's border is not an edge.
+          const at = (xx, yy) => {
+            const l = camLum[Math.min(h - 1, Math.max(0, yy)) * w + Math.min(w - 1, Math.max(0, xx))];
+            return Number.isNaN(l) ? own : l;
+          };
           const gx = at(x + 1, y - 1) + 2 * at(x + 1, y) + at(x + 1, y + 1) - at(x - 1, y - 1) - 2 * at(x - 1, y) - at(x - 1, y + 1);
           const gy = at(x - 1, y + 1) + 2 * at(x, y + 1) + at(x + 1, y + 1) - at(x - 1, y - 1) - 2 * at(x, y - 1) - at(x + 1, y - 1);
           const edge = Math.min(1, Math.hypot(gx, gy) / span * 1.6);
