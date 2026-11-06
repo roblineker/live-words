@@ -1,6 +1,5 @@
 import { createAsciiBackground } from './ascii-bg.js';
 import { createDesignPanel } from './design.js';
-import { CUES, CUE_COOLDOWN_MS } from './cues.js';
 
 const SAMPLE_RATE = 16000;
 const FRAME_MS = 32;            // the capture worklet posts 512-sample frames
@@ -25,10 +24,6 @@ const PHONE = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 const els = {
   stage: $('#stage'),
   transcript: $('#transcript-list'),
-  card: $('#card'),
-  cardTag: $('#card .card-tag'),
-  cardTitle: $('#card .card-title'),
-  cardSub: $('#card .card-sub'),
   revisions: $('#revisions'),
   meter: $('#meter'),
   status: $('#status'),
@@ -55,10 +50,7 @@ function applyDesign(d) {
   root.setProperty('--paper', d.paper);
   root.setProperty('--ink', d.ink);
   root.setProperty('--live', d.accent);
-  root.setProperty('--card', d.cardBg);
-  root.setProperty('--card-ink', d.cardInk);
   root.setProperty('--stage-font', `"${d.stageFont}"`);
-  root.setProperty('--card-font', `"${d.cardFont}"`);
   root.setProperty('--stage-size', d.stageSize);
   root.setProperty('--tracking', `${d.tracking}em`);
   root.setProperty('--stage-width', `${d.stageWidth}vw`);
@@ -66,7 +58,6 @@ function applyDesign(d) {
   root.setProperty('--transcript-width', `${d.transcriptWidth}vw`);
   root.setProperty('--transcript-size', d.transcriptSize);
   root.setProperty('--hud-opacity', d.hudOpacity);
-  root.setProperty('--card-scale', d.cardScale);
   root.setProperty('--z', d.uiScale);
 
   const cls = document.body.classList;
@@ -157,59 +148,6 @@ function setStatus(text, isError = false) {
   els.status.classList.toggle('error', isError);
 }
 
-// ---------- cue cards ----------
-
-const cueList = CUES.map((c, index) => {
-  const alts = (c.say || []).filter(Boolean).map((p) => escapeRe(p.trim()).replace(/\s+/g, '\\s+'));
-  return {
-    ...c,
-    index,
-    re: alts.length ? new RegExp(`(^|[^\\p{L}\\p{N}])(${alts.join('|')})(?=$|[^\\p{L}\\p{N}])`, 'iu') : null,
-    lastShown: -Infinity,
-  };
-});
-const cueWords = new Set(CUES.flatMap((c) => (c.say || []).flatMap((p) => p.split(/\s+/).map(norm))).filter(Boolean));
-
-let cardIndex = -1;
-let cardTimer = 0;
-
-function showCard(c, hold = c.hold ?? design.cardHold * 1000) {
-  c.lastShown = performance.now();
-  cardIndex = c.index;
-  els.cardTag.textContent = c.tag || '';
-  els.cardSub.textContent = c.sub || '';
-  scramble(els.cardTitle, c.title || '', 450);
-  els.card.classList.remove('show');
-  void els.card.offsetWidth;
-  els.card.classList.add('show');
-  document.body.classList.add('card-on');
-  clearTimeout(cardTimer);
-  if (hold > 0) cardTimer = setTimeout(hideCard, hold);
-  bg.burst(c.title);
-}
-
-function hideCard() {
-  clearTimeout(cardTimer);
-  els.card.classList.remove('show');
-  document.body.classList.remove('card-on');
-}
-
-function stepCard(delta) {
-  if (!cueList.length) return;
-  const i = cardIndex < 0 && delta < 0 ? cueList.length - 1 : (cardIndex + delta + cueList.length) % cueList.length;
-  showCard(cueList[i], 0);
-}
-
-function checkCues(text) {
-  const now = performance.now();
-  for (const c of cueList) {
-    if (c.re && now - c.lastShown > CUE_COOLDOWN_MS && c.re.test(text)) {
-      showCard(c);
-      return;
-    }
-  }
-}
-
 // ---------- words on stage and in the transcript ----------
 
 const utts = new Map();
@@ -217,7 +155,6 @@ let stageList = [];
 
 function styleFor(word) {
   const n = norm(word);
-  if (cueWords.has(n)) return 'box';
   if (n.length < 4 || STOPWORDS.has(n)) return '';
   const r = Math.random() * 100;
   if (r < design.boxPct) return 'box';
@@ -376,8 +313,6 @@ function cleanText(text) {
 }
 
 function heroWord(words) {
-  const cue = words.find((w) => cueWords.has(norm(w)));
-  if (cue) return cue;
   return words.map(norm).filter((w) => !STOPWORDS.has(w)).sort((a, b) => b.length - a.length)[0];
 }
 
@@ -394,7 +329,6 @@ function applyTranscript(id, text, final, startedAt) {
   reconcile(u, words, performance.now());
   pulseChip('words');
   pulseChip('scene', 300);
-  checkCues(words.join(' '));
   placeCursor();
 
   if (final) {
@@ -409,7 +343,6 @@ function applyTranscript(id, text, final, startedAt) {
 function clearStage() {
   for (const u of stageList) u.stageEl.remove();
   stageList = [];
-  hideCard();
 }
 
 // ---------- Moonshine (local) ----------
@@ -987,9 +920,6 @@ const design = panel.design;
 
 const actions = {
   listen: () => setListening(!state.listening),
-  next: () => stepCard(1),
-  prev: () => stepCard(-1),
-  hide: hideCard,
   // On phones the HUD starts hidden, so the toggle works the other way round.
   hud: () => document.body.classList.toggle(mobileLayout ? 'hud-on' : 'hud-off'),
   transcript: () => document.body.classList.toggle('transcript-off'),
@@ -1032,8 +962,7 @@ document.addEventListener('keydown', (e) => {
   if (!e.ctrlKey && !e.metaKey && (e.key === 'z' || e.key === 'Z')) { panel.undo(); e.preventDefault(); return; }
   if (!document.body.classList.contains('running')) return;
   const act = {
-    ' ': 'listen', ArrowRight: 'next', PageDown: 'next', ArrowLeft: 'prev', PageUp: 'prev',
-    Escape: 'hide', '.': 'hide', b: 'hide', B: 'hide', h: 'hud', H: 'hud', t: 'transcript', T: 'transcript',
+    ' ': 'listen', h: 'hud', H: 'hud', t: 'transcript', T: 'transcript',
     c: 'camera', C: 'camera', x: 'clear', X: 'clear', f: 'full', F: 'full',
   }[e.key];
   if (!act) return;
@@ -1043,7 +972,8 @@ document.addEventListener('keydown', (e) => {
 
 // ---------- touch toolbar (phones and tablets) ----------
 
-document.querySelectorAll('#touchbar button').forEach((b) => {
+// Toolbar buttons, the menu button, the HUD drawer's close button and its backdrop.
+document.querySelectorAll('[data-act]').forEach((b) => {
   b.addEventListener('click', () => { actions[b.dataset.act](); syncTouchbar(); });
 });
 
@@ -1094,4 +1024,4 @@ $('#cam').addEventListener('change', () => {
 });
 
 // For automated checks.
-window.liveWords = { state, asr, seg, bg, design, applyTranscript, showCard: (i) => showCard(cueList[i], 0) };
+window.liveWords = { state, asr, seg, bg, design, applyTranscript };

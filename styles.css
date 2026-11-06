@@ -3,10 +3,7 @@
   --ink: #141414;
   --mute: color-mix(in srgb, var(--ink) 55%, var(--paper));
   --live: #e5484d;
-  --card: #ffffff;
-  --card-ink: #141414;
   --stage-font: "IBM Plex Mono";
-  --card-font: Anton;
   --stage-size: 3.4;
   --tracking: .03em;
   --stage-width: 58vw;
@@ -14,7 +11,6 @@
   --transcript-width: 28vw;
   --transcript-size: 1;
   --hud-opacity: 1;
-  --card-scale: 1;
   --z: 1; /* UI scale: + and - keys, or the dial in the design panel */
   /* Stage and transcript end above the HUD, which grows with the UI scale. */
   --content-bottom: calc(17vh + min(calc(17vh * var(--z)), 40vh));
@@ -54,6 +50,7 @@ html, body {
   background: var(--veil);
   padding: .13em .53em;
 }
+#live, #model-label { pointer-events: none; }
 #live { left: calc(2.5vw + 54px * var(--z)); font-weight: 700; }
 #model-label { right: calc(2.5vw + 54px * var(--z)); }
 
@@ -180,7 +177,6 @@ body.paused #cursor { opacity: .25; animation: none; }
   opacity: var(--hud-opacity);
   transition: opacity .4s;
 }
-body.card-on #hud { opacity: calc(var(--hud-opacity) * .12); }
 
 .panel {
   position: relative;
@@ -230,46 +226,6 @@ body.no-glow .w { text-shadow: none; }
 body.no-cursor #cursor { display: none; }
 body.transcript-off #transcript { display: none; }
 body.transcript-off #stage { width: max(var(--stage-width), 88vw); }
-
-/* Lower-third card */
-
-#card {
-  position: fixed;
-  left: 4vw; bottom: 5vh;
-  width: min(92vw, calc(var(--z) * var(--card-scale) * min(940px, 64vw)));
-  z-index: 5;
-  padding: 1.6em 1.4em 1em;
-  font-size: calc(var(--z) * var(--card-scale) * clamp(14px, 1.35vw, 22px));
-  border: .25em solid var(--card-ink);
-  background: var(--card);
-  color: var(--card-ink);
-  opacity: 0;
-  transform: translateY(40px);
-  transition: transform .45s cubic-bezier(.2, 1.2, .3, 1), opacity .25s;
-  pointer-events: none;
-}
-#card.show { opacity: 1; transform: none; }
-.card-tag {
-  position: absolute;
-  top: -5px; left: -5px;
-  padding: .35em 1.4em .35em .7em;
-  font-size: 1em;
-  font-weight: 700;
-  letter-spacing: .08em;
-  background: var(--card-ink);
-  color: var(--card);
-}
-.card-tag:empty { display: none; }
-.card-title {
-  margin-top: .25em;
-  font-family: var(--card-font), var(--display);
-  font-size: 5.6em;
-  line-height: 1;
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-}
-.card-sub { margin-top: .5em; font-size: 1em; white-space: pre-wrap; }
 
 /* Setup */
 
@@ -553,30 +509,65 @@ body.mobile #transcript {
   border-top: 2px solid var(--ink);
 }
 
-body.mobile #hud { display: none; }
-body.mobile.hud-on #hud {
-  display: grid;
-  top: calc(env(safe-area-inset-top) + 8vh);
-  bottom: auto;
-  left: 4vw; right: 4vw;
+/* Small screens: the HUD lives in a side drawer opened from the menu button. */
+#menu, #scrim, .hud-head { display: none; }
+body.mobile #hud {
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: auto;
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(86vw, 360px);
   height: auto;
-  z-index: 6;
-  grid-template-columns: 1fr 1fr;
+  padding: calc(env(safe-area-inset-top) + 12px) 12px calc(env(safe-area-inset-bottom) + 16px);
+  overflow-y: auto;
+  font-size: calc(12px * var(--z));
+  opacity: 1;
+  background: var(--paper);
+  border-left: 2px solid var(--ink);
+  transform: translateX(105%);
+  transition: transform .3s ease;
 }
-body.mobile.hud-on #hud .panel:nth-child(3),
-body.mobile.hud-on #hud .panel:nth-child(5) { display: none; }
+body.mobile.hud-on #hud { transform: none; box-shadow: -10px 0 30px rgba(0, 0, 0, .25); }
+body.mobile #hud .panel { flex: 0 0 auto; }
+body.mobile #hud .keys-panel { display: none; }
+body.mobile .hud-head { display: flex; justify-content: space-between; align-items: center; }
+.hud-close {
+  padding: 8px 12px;
+  font: 700 12px var(--mono);
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+}
+body.mobile.hud-on #scrim { display: block; position: fixed; inset: 0; z-index: 17; background: rgba(0, 0, 0, .35); }
 
-body.mobile #card {
-  left: 4vw;
-  bottom: calc(var(--bar) + 2vh);
-  width: 92vw;
-  font-size: calc(var(--z) * var(--card-scale) * 14px);
+body.mobile.running #menu {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 2vh - 4px);
+  right: 2.5vw;
+  z-index: 16;
+  display: grid;
+  place-items: center;
+  width: 40px; height: 40px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
 }
-body.mobile .card-title {
-  font-size: clamp(34px, calc(var(--card-scale) * 13vw), 5.6em);
-  white-space: normal;
-  line-height: .95;
+#menu i, #menu i::before, #menu i::after {
+  content: "";
+  display: block;
+  width: 18px; height: 2px;
+  background: var(--ink);
 }
+#menu i { position: relative; }
+#menu i::before { position: absolute; top: -6px; }
+#menu i::after { position: absolute; top: 6px; }
+body.mobile.running .corner.tr { display: none; }
+body.mobile.running #model-label { right: calc(2.5vw + 50px); }
+
 
 body.mobile .keys { display: none; }
 body.mobile .setup-box { padding: 0 18px 16px; }

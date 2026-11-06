@@ -41,7 +41,11 @@
   <div id="transcript-list"></div>
 </aside>
 
+<button id="menu" data-act="hud" aria-label="Show HUD"><i></i></button>
+<div id="scrim" data-act="hud"></div>
+
 <section id="hud">
+  <div class="hud-head"><span class="panel-title">HUD</span><button class="hud-close" data-act="hud">close</button></div>
   <div class="panel">
     <h3>DEVICES</h3>
     <dl>
@@ -76,12 +80,10 @@
       <dt>running</dt><dd id="s-clock">00:00</dd>
     </dl>
   </div>
-  <div class="panel">
+  <div class="panel keys-panel">
     <h3>KEYS</h3>
     <div class="hud-keys">
       <b>Space</b><span>pause / listen</span>
-      <b>&rarr; &larr;</b><span>next / prev card</span>
-      <b>Esc</b><span>hide card</span>
       <b>D</b><span>design panel</span>
       <b>S / Z</b><span>shuffle / undo</span>
       <b>+ / - / 0</b><span>UI size / reset</span>
@@ -96,8 +98,6 @@
 
 <nav id="touchbar">
   <button data-act="listen">Pause</button>
-  <button data-act="next">Card &#9654;</button>
-  <button data-act="hide">Hide card</button>
   <button data-act="shuffle">Shuffle</button>
   <button data-act="undo">Undo</button>
   <button data-act="design">Design</button>
@@ -107,12 +107,6 @@
   <button data-act="clear">Clear</button>
   <button data-act="full">Full screen</button>
 </nav>
-
-<div id="card">
-  <div class="card-tag"></div>
-  <div class="card-title"></div>
-  <div class="card-sub"></div>
-</div>
 
 <div id="setup">
   <div class="setup-box">
@@ -153,9 +147,6 @@
 
     <div class="keys">
       <span>Space</span> pause / listen
-      <span>→ / PgDn</span> next card
-      <span>← / PgUp</span> previous card
-      <span>Esc / .</span> hide card
       <span>H</span> hide HUD
       <span>T</span> hide transcript
       <span>C</span> camera on / off

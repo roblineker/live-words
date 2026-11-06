@@ -1,7 +1,7 @@
 # Live Words
 
 A live stage for talking: you speak, and your words type out over an ASCII scene as you say them.
-A transcript runs down the side, and lower-third cards pop up when you say certain keywords.
+A transcript runs down the side.
 Inspired by kem_glitch's reel, minus the green screen and person cutout.
 
 ![preview](preview.png)
@@ -29,9 +29,6 @@ Pick an engine and press START. Defaults: Browser speech, microphone and the def
 | Key | Does |
 | --- | --- |
 | Space | pause / listen |
-| → / PgDn | next card |
-| ← / PgUp | previous card |
-| Esc / . / B | hide card |
 | H | hide HUD and frame |
 | T | hide transcript (the stage goes full width) |
 | C | camera on/off, drawn as ASCII art in the background |
@@ -41,17 +38,15 @@ Pick an engine and press START. Defaults: Browser speech, microphone and the def
 | S / Z | shuffle the design / undo |
 | + / - / 0 | UI scale bigger / smaller / reset (for big screens and TVs) |
 
-PgUp/PgDn/Esc/B are what presenter clickers send, so a clicker steps through the cards.
-
 ## Design panel (D)
 
 Press **D** any time (even before START) for dials and sliders that restyle everything live:
 
 - **Scene:** speed, blob amount, blob size, voice reactivity, grid size, ink strength, texture, glyphs, crosshairs, stamped words, frame rate, the character set, the font
 - **Camera:** on/off, strength, contrast, brightness, trails, style (blend / camera only / edges / edges + fill), position (full / left / right / centre), posterise, invert, mirror
-- **Colour:** paper, ink, live dot, card, card ink
+- **Colour:** paper, ink, live dot
 - **Words:** size, spacing, how often words get boxed / serif / inverted, font, phrases on stage, stage width and position, uppercase, glow, cursor
-- **Panels:** card size, font and how long cards stay up, transcript size and width, HUD opacity, frame
+- **Panels:** UI scale, transcript size and width, HUD opacity, frame
 
 Presets: Paper, Terminal, Blueprint, Riso, Night (full looks) and Calm, Chaos (motion only, keeps your colours).
 "save as..." stores your own looks, and copy/paste JSON moves a look between machines. Settings save automatically.
@@ -67,10 +62,11 @@ If the model falls behind (real-time factor above 0.9), live passes pause so the
 top-right label warns you. On this laptop that happens when Paseo and other apps are using the CPU heavily.
 For a live talk, close heavy apps or use **Browser speech**.
 
-## Your cards
+## Phones
 
-Edit `cues.js`. Each card has `say` (keywords that trigger it), `tag`, `title`, `sub` and an optional `hold`.
-A card with an empty `say` only shows when you step to it by hand.
+On small screens the words fill the width and a toolbar at the bottom replaces the hotkeys (it hides after
+5 s; tap to bring it back). The menu button top right opens the HUD in a side drawer. The camera button
+cycles front, back and off. Browser speech on a phone leaves the mic to the phone's recogniser.
 
 ## How it works
 

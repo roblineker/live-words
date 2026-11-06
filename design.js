@@ -10,8 +10,6 @@ export const DESIGN_DEFAULTS = {
   ...SCENE_DEFAULTS,
   paper: '#f1f1ee',
   accent: '#e5484d',
-  cardBg: '#ffffff',
-  cardInk: '#141414',
   stageFont: 'IBM Plex Mono',
   stageSize: 3.4,
   tracking: 0.03,
@@ -29,9 +27,6 @@ export const DESIGN_DEFAULTS = {
   hudOpacity: 1,
   frame: true,
   uiScale: 1,
-  cardScale: 1,
-  cardFont: 'Anton',
-  cardHold: 8,
 };
 
 const FONTS = ['IBM Plex Mono', 'Space Mono', 'VT323', 'Major Mono Display', 'Anton', 'Archivo Black', 'Instrument Serif'];
@@ -48,19 +43,19 @@ const RAMPS = {
 const PRESETS = {
   Paper: {},
   Terminal: {
-    paper: '#070b07', ink: '#3cff72', accent: '#3cff72', cardBg: '#070b07', cardInk: '#3cff72',
-    stageFont: 'VT323', sceneFont: 'VT323', cardFont: 'VT323', stageSize: 4.4, ramp: ' .:-=+*#%@', glow: false,
+    paper: '#070b07', ink: '#3cff72', accent: '#3cff72',
+    stageFont: 'VT323', sceneFont: 'VT323', stageSize: 4.4, ramp: ' .:-=+*#%@', glow: false,
   },
   Blueprint: {
-    paper: '#123f8f', ink: '#e8f0ff', accent: '#ffd23f', cardBg: '#e8f0ff', cardInk: '#123f8f',
+    paper: '#123f8f', ink: '#e8f0ff', accent: '#ffd23f',
     ramp: ' .:-=+*#%@', inkAlpha: 0.5, glow: false,
   },
   Riso: {
-    paper: '#f4eee2', ink: '#1d3fbb', accent: '#ff4f6d', cardBg: '#fff7ea', cardInk: '#1d3fbb',
+    paper: '#f4eee2', ink: '#1d3fbb', accent: '#ff4f6d',
     stageFont: 'Space Mono', ramp: ' .oO@', amount: 1.4,
   },
   Night: {
-    paper: '#101010', ink: '#efefe9', accent: '#ff5a4f', cardBg: '#efefe9', cardInk: '#101010',
+    paper: '#101010', ink: '#efefe9', accent: '#ff5a4f',
     inkAlpha: 0.55, glow: false,
   },
   Calm: {
@@ -72,7 +67,7 @@ const PRESETS = {
   },
 };
 
-// [paper, ink, live dot, card, card ink]
+// [paper, ink, live dot, ...extra colours unused]
 const PALETTES = [
   ['#f1f1ee', '#141414', '#e5484d', '#ffffff', '#141414'],
   ['#070b07', '#3cff72', '#3cff72', '#070b07', '#3cff72'],
@@ -114,14 +109,14 @@ function inventPalette() {
   const inkHue = (h + pick([0, 30, 150, 180, 210])) % 360;
   const ink = hslHex(inkHue, rand(55, 100), dark ? rand(60, 78) : rand(14, 32));
   const accent = hslHex((inkHue + rand(120, 220)) % 360, 90, 55);
-  return Math.random() < 0.5 ? [paper, ink, accent, ink, paper] : [paper, ink, accent, paper, ink];
+  return [paper, ink, accent];
 }
 
 function shuffledDesign() {
-  const [paper, ink, accent, cardBg, cardInk] = Math.random() < 0.6 ? pick(PALETTES) : inventPalette();
+  const [paper, ink, accent] = Math.random() < 0.6 ? pick(PALETTES) : inventPalette();
   const stageFont = pick(FONTS);
   return {
-    paper, ink, accent, cardBg, cardInk,
+    paper, ink, accent,
     speed: rand(0.2, 2.5, 0.05),
     amount: rand(0.4, 2, 0.05),
     blobScale: rand(0.5, 2.2, 0.05),
@@ -142,7 +137,6 @@ function shuffledDesign() {
     boxPct: Math.round(rand(0, 25)),
     serifPct: Math.round(rand(0, 15)),
     invPct: Math.round(rand(0, 15)),
-    cardFont: pick(['Anton', 'Archivo Black', 'VT323', 'Instrument Serif', 'Major Mono Display', 'Space Mono']),
     camMode: pick(['blend', 'blend', 'camera only', 'edges', 'edges + fill']),
     camContrast: rand(0.8, 2, 0.05),
     camTrail: Math.random() < 0.4 ? rand(0.3, 0.8, 0.01) : 0,
@@ -184,8 +178,6 @@ const SECTIONS = [
     { key: 'paper', label: 'paper', type: 'color' },
     { key: 'ink', label: 'ink', type: 'color' },
     { key: 'accent', label: 'live dot', type: 'color' },
-    { key: 'cardBg', label: 'card', type: 'color' },
-    { key: 'cardInk', label: 'card ink', type: 'color' },
   ]],
   ['WORDS', [
     { key: 'stageSize', label: 'size', type: 'dial', min: 1.5, max: 9, step: 0.1 },
@@ -203,9 +195,6 @@ const SECTIONS = [
   ]],
   ['PANELS', [
     { key: 'uiScale', label: 'UI scale', type: 'dial', min: 0.5, max: 3, step: 0.05 },
-    { key: 'cardScale', label: 'card size', type: 'dial', min: 0.5, max: 1.6, step: 0.02 },
-    { key: 'cardHold', label: 'card secs', type: 'dial', min: 0, max: 30, step: 1, unit: 's' },
-    { key: 'cardFont', label: 'card font', type: 'select', options: FONTS },
     { key: 'transcriptWidth', label: 'transcript width', type: 'slider', min: 15, max: 45, step: 1, unit: 'vw' },
     { key: 'transcriptSize', label: 'transcript text', type: 'slider', min: 0.6, max: 2, step: 0.05 },
     { key: 'hudOpacity', label: 'HUD opacity', type: 'slider', min: 0, max: 1, step: 0.01 },
